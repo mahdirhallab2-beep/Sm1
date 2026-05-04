@@ -511,7 +511,7 @@
         
         .markets-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 20px;
             margin-bottom: 25px;
         }
@@ -551,11 +551,6 @@
         .market-card.token-missing {
             border-color: var(--info);
             background: rgba(100, 181, 246, 0.05);
-        }
-        
-        .market-card.max-martingale-reached {
-            border-color: var(--danger);
-            background: rgba(255, 107, 107, 0.15);
         }
         
         .market-header {
@@ -903,25 +898,6 @@
             background: rgba(255, 107, 107, 0.2);
             border-color: var(--danger);
         }
-        
-        .martingale-input-group {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
-        
-        .martingale-input-group input {
-            flex: 1;
-            padding: 10px;
-        }
-        
-        .martingale-badge {
-            background: rgba(255, 217, 61, 0.2);
-            color: var(--warning);
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 0.7rem;
-        }
     </style>
 </head>
 <body class="dark-mode"> 
@@ -932,7 +908,7 @@
     <div class="container">
         <header>
             <h1><i class="fas fa-robot"></i> نظام تداول Deriv - 7 أسواق متوازية</h1>
-            <p class="subtitle">كل سوق مستقل - حجم مارتينجال قابل للتعديل لكل سوق</p>
+            <p class="subtitle">كل سوق مستقل - توكن مارتينجال مركزي - إعادة تعيين تلقائي للخسائر</p>
         </header>
         
         <div class="timer-container">
@@ -1013,14 +989,14 @@
                 
                 <div class="settings-grid">
                     <div class="form-group">
-                        <label for="multiplier"><i class="fas fa-arrows-alt-v"></i> مضاعف مارتينجال العام</label>
+                        <label for="multiplier"><i class="fas fa-arrows-alt-v"></i> مضاعف مارتينجال (عام)</label>
                         <input type="number" id="multiplier" value="2.2" step="0.1" min="1.1" max="10">
-                        <small>يستخدم لجميع الأسواق عند تفعيل المارتينجال</small>
+                        <small>يستخدم لجميع الأسواق</small>
                     </div>
                     <div class="form-group">
                         <label for="max-martingale"><i class="fas fa-shield-alt"></i> الحد الأقصى لمراحل المارتينجال</label>
                         <input type="number" id="max-martingale" value="10" min="1" max="20">
-                        <small>الحد الأقصى لمراحل المارتينجال (يمكن تعديله حتى 20)</small>
+                        <small>الحد الأقصى للمراحل (يمكن تعديله حتى 20)</small>
                     </div>
                 </div>
                 
@@ -1061,11 +1037,12 @@
                             <th>السوق</th>
                             <th>الحالة</th>
                             <th>الخسائر</th>
-                            <th>حجم ثابت</th>
+                            <th>حجم الصفقة الثابت</th>
                             <th>حجم مارتينجال</th>
                             <th>رأس المال</th>
                             <th>الأرباح</th>
                             <th>الإشارة</th>
+                            <th>التداول</th>
                         </tr>
                     </thead>
                     <tbody id="markets-table-body">
@@ -1086,14 +1063,6 @@
                         <small>يستخدم عندما يصل أي سوق للحد الأقصى للخسائر</small>
                     </div>
                 </div>
-                
-                <div class="form-group">
-                    <div class="required-token">
-                        <label for="primary-initial-stake"><i class="fas fa-dollar-sign"></i> حجم المارتينجال الابتدائي العام (USD)</label>
-                        <input type="number" id="primary-initial-stake" value="0.77" step="0.01" min="0.01" max="1000">
-                        <small>القيمة الافتراضية لجميع الأسواق (يمكن تعديلها لكل سوق)</small>
-                    </div>
-                </div>
             </div>
             
             <div class="primary-stats-grid">
@@ -1106,11 +1075,15 @@
                     <div class="primary-stat-value" id="primary-capital-detail">0.00 USD</div>
                 </div>
                 <div class="primary-stat-card">
+                    <div class="primary-stat-label">حجم الصفقة الحالي</div>
+                    <div class="primary-stat-value" id="primary-current-stake">0.77 USD</div>
+                </div>
+                <div class="primary-stat-card">
                     <div class="primary-stat-label">المرحلة الحالية</div>
                     <div class="primary-stat-value" id="primary-current-stage">1</div>
                 </div>
                 <div class="primary-stat-card" style="background: rgba(255, 107, 107, 0.2); border-color: var(--danger);">
-                    <div class="primary-stat-label">أعلى مرحلة وصل لها</div>
+                    <div class="primary-stat-label">أعلى مرحلة مارتينجال وصل لها</div>
                     <div class="primary-stat-value" id="primary-max-stage-reached" style="color: var(--danger);">0</div>
                 </div>
             </div>
@@ -1228,13 +1201,13 @@
         // * تعريف الأسواق السبعة *
         // **********************************************
         const MARKETS = [
-            { id: 1, name: 'EUR/USD', symbol: 'R_100', token: '', maxConsecutiveLosses: 3, consecutiveLosses: 0, fixedStake: 0.35, martingaleInitialStake: 0.77, usingMartingale: false, enabled: false, isTrading: false, totalPnl: 0, balance: 0, capital: 0, lastSignal: 'WAIT', tickData: [], activeTrades: [], wsConnection: null, connected: false, lastPingTime: 0, lastTradeTime: 0, tradeCooldown: 3000, maxMartingaleStageReached: 0 },
-            { id: 2, name: 'GBP/USD', symbol: 'R_50', token: '', maxConsecutiveLosses: 3, consecutiveLosses: 0, fixedStake: 0.35, martingaleInitialStake: 0.77, usingMartingale: false, enabled: false, isTrading: false, totalPnl: 0, balance: 0, capital: 0, lastSignal: 'WAIT', tickData: [], activeTrades: [], wsConnection: null, connected: false, lastPingTime: 0, lastTradeTime: 0, tradeCooldown: 3000, maxMartingaleStageReached: 0 },
-            { id: 3, name: 'EUR/USD Forex', symbol: 'frxEURUSD', token: '', maxConsecutiveLosses: 3, consecutiveLosses: 0, fixedStake: 0.35, martingaleInitialStake: 0.77, usingMartingale: false, enabled: false, isTrading: false, totalPnl: 0, balance: 0, capital: 0, lastSignal: 'WAIT', tickData: [], activeTrades: [], wsConnection: null, connected: false, lastPingTime: 0, lastTradeTime: 0, tradeCooldown: 3000, maxMartingaleStageReached: 0 },
-            { id: 4, name: 'GBP/USD Forex', symbol: 'frxGBPUSD', token: '', maxConsecutiveLosses: 3, consecutiveLosses: 0, fixedStake: 0.35, martingaleInitialStake: 0.77, usingMartingale: false, enabled: false, isTrading: false, totalPnl: 0, balance: 0, capital: 0, lastSignal: 'WAIT', tickData: [], activeTrades: [], wsConnection: null, connected: false, lastPingTime: 0, lastTradeTime: 0, tradeCooldown: 3000, maxMartingaleStageReached: 0 },
-            { id: 5, name: 'Volatility 50 (1s) Index', symbol: '1HZ100V', token: '', maxConsecutiveLosses: 3, consecutiveLosses: 0, fixedStake: 0.35, martingaleInitialStake: 0.77, usingMartingale: false, enabled: false, isTrading: false, totalPnl: 0, balance: 0, capital: 0, lastSignal: 'WAIT', tickData: [], activeTrades: [], wsConnection: null, connected: false, lastPingTime: 0, lastTradeTime: 0, tradeCooldown: 3000, maxMartingaleStageReached: 0 },
-            { id: 6, name: 'Volatility 10 Index', symbol: 'R_10', token: '', maxConsecutiveLosses: 3, consecutiveLosses: 0, fixedStake: 0.35, martingaleInitialStake: 0.77, usingMartingale: false, enabled: false, isTrading: false, totalPnl: 0, balance: 0, capital: 0, lastSignal: 'WAIT', tickData: [], activeTrades: [], wsConnection: null, connected: false, lastPingTime: 0, lastTradeTime: 0, tradeCooldown: 3000, maxMartingaleStageReached: 0 },
-            { id: 7, name: 'Volatility 25 Index', symbol: 'R_25', token: '', maxConsecutiveLosses: 3, consecutiveLosses: 0, fixedStake: 0.35, martingaleInitialStake: 0.77, usingMartingale: false, enabled: false, isTrading: false, totalPnl: 0, balance: 0, capital: 0, lastSignal: 'WAIT', tickData: [], activeTrades: [], wsConnection: null, connected: false, lastPingTime: 0, lastTradeTime: 0, tradeCooldown: 3000, maxMartingaleStageReached: 0 }
+            { id: 1, name: 'EUR/USD', symbol: 'R_100', token: '', maxConsecutiveLosses: 3, consecutiveLosses: 0, fixedStake: 0.35, martingaleStake: 0.77, usingMartingale: false, enabled: false, isTrading: false, totalPnl: 0, balance: 0, capital: 0, lastSignal: 'WAIT', tickData: [], activeTrades: [], wsConnection: null, connected: false, lastPingTime: 0, lastTradeTime: 0, tradeCooldown: 3000, maxMartingaleStageReached: 0 },
+            { id: 2, name: 'GBP/USD', symbol: 'R_50', token: '', maxConsecutiveLosses: 3, consecutiveLosses: 0, fixedStake: 0.35, martingaleStake: 0.77, usingMartingale: false, enabled: false, isTrading: false, totalPnl: 0, balance: 0, capital: 0, lastSignal: 'WAIT', tickData: [], activeTrades: [], wsConnection: null, connected: false, lastPingTime: 0, lastTradeTime: 0, tradeCooldown: 3000, maxMartingaleStageReached: 0 },
+            { id: 3, name: 'EUR/USD Forex', symbol: 'frxEURUSD', token: '', maxConsecutiveLosses: 3, consecutiveLosses: 0, fixedStake: 0.35, martingaleStake: 0.77, usingMartingale: false, enabled: false, isTrading: false, totalPnl: 0, balance: 0, capital: 0, lastSignal: 'WAIT', tickData: [], activeTrades: [], wsConnection: null, connected: false, lastPingTime: 0, lastTradeTime: 0, tradeCooldown: 3000, maxMartingaleStageReached: 0 },
+            { id: 4, name: 'GBP/USD Forex', symbol: 'frxGBPUSD', token: '', maxConsecutiveLosses: 3, consecutiveLosses: 0, fixedStake: 0.35, martingaleStake: 0.77, usingMartingale: false, enabled: false, isTrading: false, totalPnl: 0, balance: 0, capital: 0, lastSignal: 'WAIT', tickData: [], activeTrades: [], wsConnection: null, connected: false, lastPingTime: 0, lastTradeTime: 0, tradeCooldown: 3000, maxMartingaleStageReached: 0 },
+            { id: 5, name: 'Volatility 50 (1s) Index', symbol: '1HZ100V', token: '', maxConsecutiveLosses: 3, consecutiveLosses: 0, fixedStake: 0.35, martingaleStake: 0.77, usingMartingale: false, enabled: false, isTrading: false, totalPnl: 0, balance: 0, capital: 0, lastSignal: 'WAIT', tickData: [], activeTrades: [], wsConnection: null, connected: false, lastPingTime: 0, lastTradeTime: 0, tradeCooldown: 3000, maxMartingaleStageReached: 0 },
+            { id: 6, name: 'Volatility 10 Index', symbol: 'R_10', token: '', maxConsecutiveLosses: 3, consecutiveLosses: 0, fixedStake: 0.35, martingaleStake: 0.77, usingMartingale: false, enabled: false, isTrading: false, totalPnl: 0, balance: 0, capital: 0, lastSignal: 'WAIT', tickData: [], activeTrades: [], wsConnection: null, connected: false, lastPingTime: 0, lastTradeTime: 0, tradeCooldown: 3000, maxMartingaleStageReached: 0 },
+            { id: 7, name: 'Volatility 25 Index', symbol: 'R_25', token: '', maxConsecutiveLosses: 3, consecutiveLosses: 0, fixedStake: 0.35, martingaleStake: 0.77, usingMartingale: false, enabled: false, isTrading: false, totalPnl: 0, balance: 0, capital: 0, lastSignal: 'WAIT', tickData: [], activeTrades: [], wsConnection: null, connected: false, lastPingTime: 0, lastTradeTime: 0, tradeCooldown: 3000, maxMartingaleStageReached: 0 }
         ];
 
         // **********************************************
@@ -1242,7 +1215,7 @@
         // **********************************************
         const PRIMARY_TOKEN = {
             token: '', wsConnection: null, connected: false, isTrading: false,
-            martingaleStage: 1, martingaleStake: 0.77, initialStake: 0.77,
+            martingaleStage: 1, martingaleStake: 0.77,
             martingaleMultiplier: 2.2, maxMartingale: 10, consecutiveLosses: 0,
             totalPnl: 0, balance: 0, capital: 0, lastPingTime: 0, activeTrades: [],
             currentMarketUsing: null, lastTradeTime: 0, tradeCooldown: 3000,
@@ -1273,10 +1246,9 @@
             tradeDuration: document.getElementById('trade-duration'), multiplier: document.getElementById('multiplier'),
             maxMartingale: document.getElementById('max-martingale'), enablePingCheckbox: document.getElementById('enable-ping'),
             pingIntervalInput: document.getElementById('ping-interval'), primaryToken: document.getElementById('primary-token'),
-            primaryInitialStake: document.getElementById('primary-initial-stake'),
             primaryPnl: document.getElementById('primary-pnl'), primaryCapital: document.getElementById('primary-capital'),
             primaryPnlDetail: document.getElementById('primary-pnl-detail'), primaryCapitalDetail: document.getElementById('primary-capital-detail'),
-            primaryCurrentStage: document.getElementById('primary-current-stage'),
+            primaryCurrentStake: document.getElementById('primary-current-stake'), primaryCurrentStage: document.getElementById('primary-current-stage'),
             primaryMaxStageReached: document.getElementById('primary-max-stage-reached'),
             globalMaxMartingale: document.getElementById('global-max-martingale'), maxMartingaleReached: document.getElementById('max-martingale-reached'),
             startBotBtn: document.getElementById('start-bot'), stopBotBtn: document.getElementById('stop-bot'),
@@ -1349,12 +1321,6 @@
             });
             uiElements.multiplier.addEventListener('change', updateMartingaleSettings);
             uiElements.maxMartingale.addEventListener('change', updateMartingaleSettings);
-            uiElements.primaryInitialStake.addEventListener('change', function() {
-                PRIMARY_TOKEN.initialStake = parseFloat(this.value) || 0.77;
-                PRIMARY_TOKEN.martingaleStake = PRIMARY_TOKEN.initialStake;
-                updateUI();
-                Logger.add(`تم تحديث حجم المارتينجال الابتدائي العام إلى ${PRIMARY_TOKEN.initialStake.toFixed(2)} USD`, 'info');
-            });
         }
 
         function createMarketsCards() {
@@ -1366,10 +1332,8 @@
                     <div class="market-info">
                         <div class="info-item"><div class="info-label">الخسائر</div><div class="info-value" id="market-losses-${market.id}">${market.consecutiveLosses}/${market.maxConsecutiveLosses}</div></div>
                         <div class="info-item"><div class="info-label">حجم ثابت</div><div class="info-value" id="market-stake-${market.id}">${market.fixedStake.toFixed(2)} USD</div></div>
-                        <div class="info-item"><div class="info-label">حجم مارتينجال</div><div class="info-value" id="market-martingale-stake-${market.id}">${market.martingaleInitialStake.toFixed(2)} USD</div></div>
-                        <div class="info-item"><div class="info-label">رأس المال</div><div class="info-value" id="market-capital-${market.id}">${market.capital.toFixed(2)} USD</div></div>
+                        <div class="info-item"><div class="info-label">حجم مارتينجال</div><div class="info-value" id="market-martingale-stake-${market.id}">${market.martingaleStake.toFixed(2)} USD</div></div>
                         <div class="info-item"><div class="info-label">الأرباح</div><div class="info-value" id="market-profit-${market.id}">${market.totalPnl.toFixed(2)} USD</div></div>
-                        <div class="info-item"><div class="info-label">أعلى مرحلة</div><div class="info-value" id="market-max-stage-${market.id}">${market.maxMartingaleStageReached}</div></div>
                     </div>
                     <div class="ticks-preview" id="market-ticks-${market.id}"><div class="tick-dot tick-neutral"></div><div class="tick-dot tick-neutral"></div><div class="tick-dot tick-neutral"></div><div class="tick-dot tick-neutral"></div><div class="tick-dot tick-neutral"></div></div>
                 </div>`;
@@ -1392,8 +1356,8 @@
                         <input type="number" id="market-max-losses-${market.id}" value="${market.maxConsecutiveLosses}" min="1" max="10" class="market-max-losses"></div>
                         <div class="market-settings-item"><label for="market-fixed-stake-${market.id}">حجم الصفقة الثابت (USD)</label>
                         <input type="number" id="market-fixed-stake-${market.id}" value="${market.fixedStake.toFixed(2)}" step="0.01" min="0.01" max="1000" class="market-fixed-stake"></div>
-                        <div class="market-settings-item"><label for="market-martingale-stake-${market.id}">حجم المارتينجال الابتدائي (USD) <span class="martingale-badge">قابل للتعديل</span></label>
-                        <input type="number" id="market-martingale-stake-${market.id}" value="${market.martingaleInitialStake.toFixed(2)}" step="0.01" min="0.01" max="1000" class="market-martingale-stake"></div>
+                        <div class="market-settings-item"><label for="market-martingale-stake-${market.id}">حجم صفقة المارتينجال الابتدائي (USD)</label>
+                        <input type="number" id="market-martingale-stake-${market.id}" value="${market.martingaleStake.toFixed(2)}" step="0.01" min="0.01" max="1000" class="market-martingale-stake"></div>
                         <div class="market-settings-item"><label for="market-capital-${market.id}">رأس المال (USD)</label>
                         <input type="number" id="market-capital-${market.id}" value="${market.capital.toFixed(2)}" step="10" min="0" class="market-capital"></div>
                     </div></div>
@@ -1403,18 +1367,14 @@
             MARKETS.forEach(market => {
                 const tokenInput = document.getElementById(`market-token-${market.id}`);
                 const stakeInput = document.getElementById(`market-fixed-stake-${market.id}`);
+                const martingaleStakeInput = document.getElementById(`market-martingale-stake-${market.id}`);
                 const lossesInput = document.getElementById(`market-max-losses-${market.id}`);
                 const capitalInput = document.getElementById(`market-capital-${market.id}`);
-                const martingaleStakeInput = document.getElementById(`market-martingale-stake-${market.id}`);
                 if (tokenInput) tokenInput.addEventListener('input', () => updateMarketEnabledStatus(market.id));
                 if (stakeInput) stakeInput.addEventListener('change', () => { MARKETS[market.id-1].fixedStake = parseFloat(stakeInput.value) || 0.35; updateUI(); });
+                if (martingaleStakeInput) martingaleStakeInput.addEventListener('change', () => { MARKETS[market.id-1].martingaleStake = parseFloat(martingaleStakeInput.value) || 0.77; updateUI(); });
                 if (lossesInput) lossesInput.addEventListener('change', () => { MARKETS[market.id-1].maxConsecutiveLosses = parseInt(lossesInput.value) || 3; updateUI(); });
                 if (capitalInput) capitalInput.addEventListener('change', () => { MARKETS[market.id-1].capital = parseFloat(capitalInput.value) || 0; updateUI(); });
-                if (martingaleStakeInput) martingaleStakeInput.addEventListener('change', () => { 
-                    MARKETS[market.id-1].martingaleInitialStake = parseFloat(martingaleStakeInput.value) || 0.77;
-                    updateUI();
-                    Logger.add(`${market.name}: تم تحديث حجم المارتينجال الابتدائي إلى ${MARKETS[market.id-1].martingaleInitialStake.toFixed(2)} USD`, 'info', market.id);
-                });
             });
         }
 
@@ -1448,10 +1408,11 @@
                     <td><span class="market-status ${statusClass}">${statusText}</span></td>
                     <td>${market.consecutiveLosses}/${market.maxConsecutiveLosses}</td>
                     <td>${market.fixedStake.toFixed(2)} USD</td>
-                    <td><span class="badge badge-warning">${market.martingaleInitialStake.toFixed(2)} USD</span></td>
+                    <td>${market.martingaleStake.toFixed(2)} USD</td>
                     <td class="${market.capital >= 0 ? 'profit' : 'loss'}">${market.capital.toFixed(2)} USD</td>
                     <td class="${market.totalPnl >= 0 ? 'profit' : 'loss'}">${market.totalPnl.toFixed(2)} USD</td>
                     <td id="table-signal-${market.id}">${market.lastSignal}</td>
+                    <td id="table-trading-${market.id}">${market.isTrading ? 'نشط' : 'متوقف'}</td>
                 </tr>`;
             });
             uiElements.marketsTableBody.innerHTML = html;
@@ -1479,6 +1440,7 @@
             uiElements.primaryPnlDetail.textContent = `${PRIMARY_TOKEN.totalPnl.toFixed(2)} USD`;
             uiElements.primaryPnlDetail.style.color = PRIMARY_TOKEN.totalPnl >= 0 ? 'var(--success)' : 'var(--danger)';
             uiElements.primaryCapitalDetail.textContent = `${PRIMARY_TOKEN.capital.toFixed(2)} USD`;
+            uiElements.primaryCurrentStake.textContent = `${PRIMARY_TOKEN.martingaleStake.toFixed(2)} USD`;
             uiElements.primaryCurrentStage.textContent = PRIMARY_TOKEN.martingaleStage;
             uiElements.primaryMaxStageReached.textContent = PRIMARY_TOKEN.highestStageReached;
             uiElements.globalMaxMartingale.textContent = PRIMARY_TOKEN.maxMartingale;
@@ -1502,19 +1464,16 @@
                 const lossesElement = document.getElementById(`market-losses-${market.id}`);
                 const stakeElement = document.getElementById(`market-stake-${market.id}`);
                 const martingaleStakeElement = document.getElementById(`market-martingale-stake-${market.id}`);
-                const capitalElement = document.getElementById(`market-capital-${market.id}`);
                 const profitElement = document.getElementById(`market-profit-${market.id}`);
-                const maxStageElement = document.getElementById(`market-max-stage-${market.id}`);
                 const tableSignalElement = document.getElementById(`table-signal-${market.id}`);
+                const tableTradingElement = document.getElementById(`table-trading-${market.id}`);
                 const stakeInput = document.getElementById(`market-fixed-stake-${market.id}`);
+                const martingaleStakeInput = document.getElementById(`market-martingale-stake-${market.id}`);
                 const capitalInput = document.getElementById(`market-capital-${market.id}`);
-                const martingaleInput = document.getElementById(`market-martingale-stake-${market.id}`);
                 
                 if (stakeInput && parseFloat(stakeInput.value) !== market.fixedStake) stakeInput.value = market.fixedStake.toFixed(2);
+                if (martingaleStakeInput && parseFloat(martingaleStakeInput.value) !== market.martingaleStake) martingaleStakeInput.value = market.martingaleStake.toFixed(2);
                 if (capitalInput && parseFloat(capitalInput.value) !== market.capital) capitalInput.value = market.capital.toFixed(2);
-                if (martingaleInput && parseFloat(martingaleInput.value) !== market.martingaleInitialStake) martingaleInput.value = market.martingaleInitialStake.toFixed(2);
-                if (maxStageElement) maxStageElement.textContent = market.maxMartingaleStageReached;
-                if (martingaleStakeElement) martingaleStakeElement.textContent = `${market.martingaleInitialStake.toFixed(2)} USD`;
                 
                 if (card) {
                     card.classList.remove('using-martingale', 'disabled', 'token-missing', 'trading-active', 'max-martingale-reached');
@@ -1535,12 +1494,13 @@
                 }
                 if (lossesElement) { lossesElement.textContent = `${market.consecutiveLosses}/${market.maxConsecutiveLosses}`; lossesElement.className = `info-value ${market.consecutiveLosses >= market.maxConsecutiveLosses ? 'loss' : ''}`; }
                 if (stakeElement) stakeElement.textContent = `${market.fixedStake.toFixed(2)} USD`;
-                if (capitalElement) capitalElement.textContent = `${market.capital.toFixed(2)} USD`;
+                if (martingaleStakeElement) martingaleStakeElement.textContent = `${market.martingaleStake.toFixed(2)} USD`;
                 if (profitElement) { profitElement.textContent = `${market.totalPnl.toFixed(2)} USD`; profitElement.className = `info-value ${market.totalPnl >= 0 ? 'profit' : 'loss'}`; }
                 if (tableSignalElement) {
                     tableSignalElement.textContent = market.lastSignal;
                     tableSignalElement.style.color = market.lastSignal === 'CALL' ? getComputedStyle(body).getPropertyValue('--success').trim() : market.lastSignal === 'PUT' ? getComputedStyle(body).getPropertyValue('--danger').trim() : getComputedStyle(body).getPropertyValue('--info').trim();
                 }
+                if (tableTradingElement) tableTradingElement.textContent = market.isTrading ? 'نشط' : 'متوقف';
                 updateTicksDisplay(market.id);
             });
             updateMarketsTable();
@@ -1583,27 +1543,25 @@
             static async connectAllMarkets() {
                 try {
                     PRIMARY_TOKEN.token = uiElements.primaryToken.value.trim();
-                    PRIMARY_TOKEN.initialStake = parseFloat(uiElements.primaryInitialStake.value) || 0.77;
-                    PRIMARY_TOKEN.martingaleStake = PRIMARY_TOKEN.initialStake;
                     PRIMARY_TOKEN.maxMartingale = parseInt(uiElements.maxMartingale.value) || 10;
+                    PRIMARY_TOKEN.martingaleMultiplier = parseFloat(uiElements.multiplier.value) || 2.2;
                     if (!PRIMARY_TOKEN.token) throw new Error('التوكن الرئيسي مطلوب لبدء النظام');
                     
                     MARKETS.forEach(market => {
                         const tokenInput = document.getElementById(`market-token-${market.id}`);
                         const maxLossesInput = document.getElementById(`market-max-losses-${market.id}`);
                         const fixedStakeInput = document.getElementById(`market-fixed-stake-${market.id}`);
-                        const capitalInput = document.getElementById(`market-capital-${market.id}`);
                         const martingaleStakeInput = document.getElementById(`market-martingale-stake-${market.id}`);
+                        const capitalInput = document.getElementById(`market-capital-${market.id}`);
                         if (tokenInput) { market.token = tokenInput.value.trim(); market.enabled = market.token !== ''; }
                         if (maxLossesInput && market.enabled) market.maxConsecutiveLosses = parseInt(maxLossesInput.value) || 3;
                         if (fixedStakeInput && market.enabled) market.fixedStake = parseFloat(fixedStakeInput.value) || 0.35;
+                        if (martingaleStakeInput && market.enabled) market.martingaleStake = parseFloat(martingaleStakeInput.value) || 0.77;
                         if (capitalInput && market.enabled) market.capital = parseFloat(capitalInput.value) || 0;
-                        if (martingaleStakeInput && market.enabled) market.martingaleInitialStake = parseFloat(martingaleStakeInput.value) || 0.77;
                     });
                     
                     ticksRequired = parseInt(uiElements.ticksRequired.value) || 2;
                     tradeDuration = parseInt(uiElements.tradeDuration.value) || 2;
-                    PRIMARY_TOKEN.martingaleMultiplier = parseFloat(uiElements.multiplier.value) || 2.2;
                     
                     await ConnectionManager.connectPrimaryToken();
                     const connectionPromises = MARKETS.filter(m => m.enabled).map(m => ConnectionManager.connectMarket(m));
@@ -1729,12 +1687,10 @@
                 if (!PRIMARY_TOKEN.connected) { Logger.add(`${market.name}: التوكن الرئيسي غير متصل`, 'error', market.id); market.isTrading = false; return; }
                 PRIMARY_TOKEN.isTrading = true; PRIMARY_TOKEN.lastTradeTime = Date.now();
                 const tradeId = 'MART_' + Date.now() + '_' + market.id;
-                // استخدام حجم المارتينجال الخاص بالسوق
-                const stake = market.martingaleInitialStake * Math.pow(PRIMARY_TOKEN.martingaleMultiplier, PRIMARY_TOKEN.martingaleStage - 1);
-                PRIMARY_TOKEN.martingaleStake = stake;
+                const stake = market.martingaleStake;
                 PRIMARY_TOKEN.activeTrades.push({ id: tradeId, marketId: market.id, isMartingale: true, contract_type: 'CALL', stake: stake, open_time: new Date(), status: 'open', stage: PRIMARY_TOKEN.martingaleStage });
                 totalTrades++; dailyTradesCount++;
-                Logger.add(`${market.name}: فتح صفقة مارتينجال CALL بمبلغ ${stake.toFixed(2)} USD (المرحلة ${PRIMARY_TOKEN.martingaleStage}) - حجم ابتدائي ${market.martingaleInitialStake.toFixed(2)} USD`, 'warning', market.id);
+                Logger.add(`${market.name}: فتح صفقة مارتينجال CALL بمبلغ ${stake.toFixed(2)} USD (المرحلة ${PRIMARY_TOKEN.martingaleStage})`, 'warning', market.id);
                 Logger.addTrade(`${market.name}: مارتينجال - فتح CALL - ${stake.toFixed(2)} USD (المرحلة ${PRIMARY_TOKEN.martingaleStage})`);
                 setTimeout(() => { TradingSystem.closeTrade(tradeId, market.id, true); }, tradeDuration * 1000);
                 updateUI();
@@ -1784,7 +1740,7 @@
                     
                     PRIMARY_TOKEN.consecutiveLosses = 0;
                     PRIMARY_TOKEN.martingaleStage = 1;
-                    PRIMARY_TOKEN.martingaleStake = market.martingaleInitialStake;
+                    PRIMARY_TOKEN.martingaleStake = market.martingaleStake;
                     market.usingMartingale = false;
                     market.consecutiveLosses = 0;
                     PRIMARY_TOKEN.currentMarketUsing = null;
@@ -1814,15 +1770,14 @@
                     if (PRIMARY_TOKEN.martingaleStage > PRIMARY_TOKEN.maxMartingale) {
                         PRIMARY_TOKEN.consecutiveLosses = 0;
                         PRIMARY_TOKEN.martingaleStage = 1;
-                        PRIMARY_TOKEN.martingaleStake = market.martingaleInitialStake;
+                        PRIMARY_TOKEN.martingaleStake = market.martingaleStake;
                         market.usingMartingale = false;
                         PRIMARY_TOKEN.currentMarketUsing = null;
                         Logger.add(`${market.name}: تجاوز الحد الأقصى للمارتينجال (${PRIMARY_TOKEN.maxMartingale}) - تم إيقاف المارتينجال`, 'error', market.id);
                         showAlert(`${market.name}: تم إيقاف المارتينجال بعد تجاوز الحد الأقصى ${PRIMARY_TOKEN.maxMartingale}`, 'danger');
                     } else {
-                        const nextStake = market.martingaleInitialStake * Math.pow(PRIMARY_TOKEN.martingaleMultiplier, PRIMARY_TOKEN.martingaleStage - 1);
-                        PRIMARY_TOKEN.martingaleStake = nextStake;
-                        Logger.add(`${market.name}: خسارة مارتينجال - المرحلة ${PRIMARY_TOKEN.martingaleStage}/${PRIMARY_TOKEN.maxMartingale} - الحجم: ${nextStake.toFixed(2)} USD (حجم ابتدائي ${market.martingaleInitialStake.toFixed(2)} USD)`, 'warning', market.id);
+                        PRIMARY_TOKEN.martingaleStake = market.martingaleStake * Math.pow(PRIMARY_TOKEN.martingaleMultiplier, PRIMARY_TOKEN.martingaleStage - 1);
+                        Logger.add(`${market.name}: خسارة مارتينجال - المرحلة ${PRIMARY_TOKEN.martingaleStage}/${PRIMARY_TOKEN.maxMartingale} - الحجم: ${PRIMARY_TOKEN.martingaleStake.toFixed(2)} USD`, 'warning', market.id);
                     }
                 }
                 updateUI();
@@ -1834,14 +1789,14 @@
                 PRIMARY_TOKEN.currentMarketUsing = market.id;
                 PRIMARY_TOKEN.consecutiveLosses = 0;
                 PRIMARY_TOKEN.martingaleStage = 1;
-                PRIMARY_TOKEN.martingaleStake = market.martingaleInitialStake;
+                PRIMARY_TOKEN.martingaleStake = market.martingaleStake;
                 
                 if (PRIMARY_TOKEN.martingaleStage > market.maxMartingaleStageReached) {
                     market.maxMartingaleStageReached = PRIMARY_TOKEN.martingaleStage;
                 }
                 
-                Logger.add(`${market.name}: وصل للحد الأقصى للخسائر - تفعيل المارتينجال بحجم ابتدائي ${market.martingaleInitialStake.toFixed(2)} USD`, 'warning', market.id);
-                showAlert(`${market.name}: تم تفعيل المارتينجال بعد ${market.maxConsecutiveLosses} خسارات متتالية بحجم ${market.martingaleInitialStake.toFixed(2)} USD`, 'warning');
+                Logger.add(`${market.name}: وصل للحد الأقصى للخسائر - تفعيل المارتينجال بحجم ابتدائي ${market.martingaleStake.toFixed(2)} USD`, 'warning', market.id);
+                showAlert(`${market.name}: تم تفعيل المارتينجال بعد ${market.maxConsecutiveLosses} خسارات متتالية بحجم ${market.martingaleStake.toFixed(2)} USD`, 'warning');
                 updateUI();
             }
         }
@@ -1935,7 +1890,7 @@
                 market.enabled = hasToken; market.connected = hasToken; 
                 market.balance = hasToken ? (capitalInput ? parseFloat(capitalInput.value) || 1000 : 1000) : 0;
                 market.capital = hasToken ? (capitalInput ? parseFloat(capitalInput.value) || 1000 : 1000) : 0;
-                market.martingaleInitialStake = martingaleStakeInput ? parseFloat(martingaleStakeInput.value) || 0.77 : 0.77;
+                market.martingaleStake = hasToken ? (martingaleStakeInput ? parseFloat(martingaleStakeInput.value) || 0.77 : 0.77) : 0.77;
                 market.lastPingTime = hasToken ? Date.now() : 0;
                 market.usingMartingale = false; market.consecutiveLosses = 0; market.totalPnl = 0; market.tickData = []; market.activeTrades = []; market.isTrading = false; market.lastTradeTime = 0;
                 market.maxMartingaleStageReached = 0;
@@ -1946,9 +1901,9 @@
             PRIMARY_TOKEN.lastPingTime = Date.now(); 
             PRIMARY_TOKEN.consecutiveLosses = 0;
             PRIMARY_TOKEN.martingaleStage = 1; 
-            PRIMARY_TOKEN.martingaleStake = parseFloat(uiElements.primaryInitialStake.value) || 0.77;
-            PRIMARY_TOKEN.initialStake = parseFloat(uiElements.primaryInitialStake.value) || 0.77;
+            PRIMARY_TOKEN.martingaleStake = MARKETS[0].martingaleStake;
             PRIMARY_TOKEN.maxMartingale = parseInt(uiElements.maxMartingale.value) || 10;
+            PRIMARY_TOKEN.martingaleMultiplier = parseFloat(uiElements.multiplier.value) || 2.2;
             PRIMARY_TOKEN.totalPnl = 0; 
             PRIMARY_TOKEN.activeTrades = [];
             PRIMARY_TOKEN.currentMarketUsing = null; 
@@ -1988,9 +1943,6 @@
             });
             PRIMARY_TOKEN.consecutiveLosses = 0; PRIMARY_TOKEN.martingaleStage = 1; PRIMARY_TOKEN.totalPnl = 0; PRIMARY_TOKEN.balance = 0; PRIMARY_TOKEN.activeTrades = [];
             PRIMARY_TOKEN.isTrading = false; PRIMARY_TOKEN.currentMarketUsing = null; 
-            PRIMARY_TOKEN.martingaleStake = parseFloat(uiElements.primaryInitialStake.value) || 0.77;
-            PRIMARY_TOKEN.initialStake = parseFloat(uiElements.primaryInitialStake.value) || 0.77;
-            PRIMARY_TOKEN.maxMartingale = parseInt(uiElements.maxMartingale.value) || 10;
             PRIMARY_TOKEN.lastTradeTime = 0;
             PRIMARY_TOKEN.highestStageReached = 0;
             uiElements.tradeLog.innerHTML = `<div class="log-entry log-info"><span class="log-time">[00:00:00]</span> <i class="fas fa-info-circle"></i> تم إعادة تعيين النظام.</div>`;
